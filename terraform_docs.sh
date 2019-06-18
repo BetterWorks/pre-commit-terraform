@@ -25,12 +25,25 @@ main() {
     esac
   done
 
-  terraform_docs "$args" "$files"
+  local hack_terraform_docs=$(terraform version | head -1 | grep -c 0.12)
+
+  if [[ "$hack_terraform_docs" == "1" ]]; then
+    which awk 2>&1 >/dev/null || ( echo "awk is required for terraform-docs hack to work with Terraform 0.12"; exit 1)
+
+    tmp_file_awk=$(mktemp "${TMPDIR:-/tmp}/terraform-docs-XXXXXXXXXX")
+    terraform_docs_awk "$tmp_file_awk"
+    terraform_docs "$tmp_file_awk" "$args" "$files"
+    rm -f "$tmp_file_awk"
+  else
+    terraform_docs "0" "$args" "$files"
+  fi
+
 }
 
 terraform_docs() {
-  readonly args="$1"
-  readonly files="$2"
+  readonly terraform_docs_awk_file="$1"
+  readonly args="$2"
+  readonly files="$3"
 
   declare -a paths
   declare -a tfvars_files
@@ -62,7 +75,18 @@ terraform_docs() {
       continue
     fi
 
+  if [[ "$terraform_docs_awk_file" == "0" ]]; then
     terraform-docs $args md ./ > "$tmp_file"
+  else
+    # Can't append extension for mktemp, so renaming instead
+    tmp_file_docs=$(mktemp "${TMPDIR:-/tmp}/terraform-docs-XXXXXXXXXX")
+    mv "$tmp_file_docs" "$tmp_file_docs.tf"
+    tmp_file_docs_tf="$tmp_file_docs.tf"
+
+    awk -f "$terraform_docs_awk_file" ./*.tf > "$tmp_file_docs_tf"
+    terraform-docs $args md "$tmp_file_docs_tf" > "$tmp_file"
+    rm -f "$tmp_file_docs_tf"
+  fi
 
     # Replace content between markers with the placeholder - https://stackoverflow.com/questions/1212799/how-do-i-extract-lines-between-two-line-delimiters-in-perl#1212834
     perl -i -ne 'if (/BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK/../END OF PRE-COMMIT-TERRAFORM DOCS HOOK/) { print $_ if /BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK/; print "I_WANT_TO_BE_REPLACED\n$_" if /END OF PRE-COMMIT-TERRAFORM DOCS HOOK/;} else { print $_ }' "$text_file"
@@ -74,6 +98,101 @@ terraform_docs() {
 
     popd > /dev/null
   done
+}
+
+terraform_docs_awk() {
+  readonly output_file=$1
+
+  cat <<"EOF" > $output_file
+# This script converts Terraform 0.12 variables/outputs to something suitable for `terraform-docs`
+# As of terraform-docs v0.6.0, HCL2 is not supported. This script is a *dirty hack* to get around it.
+# https://github.com/segmentio/terraform-docs/
+# https://github.com/segmentio/terraform-docs/issues/62
+
+# Script was originally found here: https://github.com/cloudposse/build-harness/blob/master/bin/terraform-docs.awk
+
+{
+  if ( $0 ~ /\{/ ) {
+    braceCnt++
+  }
+
+  if ( $0 ~ /\}/ ) {
+    braceCnt--
+  }
+
+  # [START] variable or output block started
+  if ($0 ~ /^[[:space:]]*(variable|output)[[:space:]][[:space:]]*"(.*?)"/) {
+    # Normalize the braceCnt (should be 1 now)
+    braceCnt = 1
+    # [CLOSE] "default" block
+    if (blockDefCnt > 0) {
+      blockDefCnt = 0
+    }
+    blockCnt++
+    print $0
+  }
+
+  # [START] multiline default statement started
+  if (blockCnt > 0) {
+    if ($0 ~ /^[[:space:]][[:space:]]*(default)[[:space:]][[:space:]]*=/) {
+      if ($3 ~ "null") {
+        print "  default = \"null\""
+      } else {
+        print $0
+        blockDefCnt++
+        blockDefStart=1
+      }
+    }
+  }
+
+  # [PRINT] single line "description"
+  if (blockCnt > 0) {
+    if (blockDefCnt == 0) {
+      if ($0 ~ /^[[:space:]][[:space:]]*description[[:space:]][[:space:]]*=/) {
+        # [CLOSE] "default" block
+        if (blockDefCnt > 0) {
+          blockDefCnt = 0
+        }
+        print $0
+      }
+    }
+  }
+
+  # [PRINT] single line "type"
+  if (blockCnt > 0) {
+    if ($0 ~ /^[[:space:]][[:space:]]*type[[:space:]][[:space:]]*=/ ) {
+      # [CLOSE] "default" block
+      if (blockDefCnt > 0) {
+        blockDefCnt = 0
+      }
+      type=$3
+      if (type ~ "object") {
+        print "  type = \"object\""
+      } else {
+        print "  type = \"" $3 "\""
+      }
+    }
+  }
+
+  # [CLOSE] variable/output block
+  if (blockCnt > 0) {
+    if (braceCnt == 0 && blockCnt > 0) {
+      blockCnt--
+      print $0
+    }
+  }
+
+  # [PRINT] Multiline "default" statement
+  if (blockCnt > 0 && blockDefCnt > 0) {
+    if (blockDefStart == 1) {
+      blockDefStart = 0
+    } else {
+      print $0
+    }
+  }
+}
+EOF
+
 }
 
 getopt() {

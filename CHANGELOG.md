@@ -3,9 +3,38 @@
 
 
 
+<a name="v1.16.0"></a>
+## [v1.16.0] - 2019-06-18
+
+- Add slash to mktemp dir (fixed [#50](https://github.com/antonbabenko/pre-commit-terraform/issues/50))
+
+
+<a name="v1.15.0"></a>
+## [v1.15.0] - 2019-06-18
+
+- Updated CHANGELOG
+- Fixed awk script for terraform-docs (kudos [@cytopia](https://github.com/cytopia)) and mktemp on Mac (closes [#47](https://github.com/antonbabenko/pre-commit-terraform/issues/47), [#48](https://github.com/antonbabenko/pre-commit-terraform/issues/48), [#49](https://github.com/antonbabenko/pre-commit-terraform/issues/49))
+- Fix version in README.md ([#46](https://github.com/antonbabenko/pre-commit-terraform/issues/46))
+
+
+<a name="v1.14.0"></a>
+## [v1.14.0] - 2019-06-17
+
+- Updated CHANGELOG
+- Upgraded to work with Terraform >= 0.12 ([#44](https://github.com/antonbabenko/pre-commit-terraform/issues/44))
+
+
+<a name="v1.13.0"></a>
+## [v1.13.0] - 2019-06-17
+
+- Updated CHANGELOG
+- Added support for terraform_docs for Terraform 0.12 ([#45](https://github.com/antonbabenko/pre-commit-terraform/issues/45))
+
+
 <a name="v1.12.0"></a>
 ## [v1.12.0] - 2019-05-27
 
+- Updated CHANGELOG
 - Added note about incompatibility of terraform-docs with Terraform 0.12 ([#41](https://github.com/antonbabenko/pre-commit-terraform/issues/41))
 - Fixed broken "maintained badge"
 - Update README.md ([#36](https://github.com/antonbabenko/pre-commit-terraform/issues/36))
@@ -147,7 +176,11 @@
 - Initial commit
 
 
-[Unreleased]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.16.0...HEAD
+[v1.16.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.15.0...v1.16.0
+[v1.15.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.14.0...v1.15.0
+[v1.14.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.13.0...v1.14.0
+[v1.13.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.12.0...v1.13.0
 [v1.12.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.11.0...v1.12.0
 [v1.11.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.10.0...v1.11.0
 [v1.10.0]: https://github.com/antonbabenko/pre-commit-terraform/compare/v1.9.0...v1.10.0
